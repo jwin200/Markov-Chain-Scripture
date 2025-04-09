@@ -27,33 +27,38 @@ import random
 
 
 def main():
-    tokenized_text = []
-    pattern = re.compile(r'^[a-zA-Z]')
     markov = {}
-    # Open and clean all texts in corpora folder
-    for name in os.listdir('corpora'):
-        if 'DS_Store' not in name:
-            with open(f'corpora/{name}', 'r') as f:
-                # Get rid of special characters
-                words = f.read().replace('\n', ' ').split()
-                for w in words:
-                    w = w.replace('"', '')
-                    w = w.replace('\'', '')
-                    if re.search(pattern, w):
-                        tokenized_text.append(w)
     
-
-    # Create Markov Chain object if one doesn't exist
+    # If a Markov Chain exists, load it
     if os.path.exists('markov_chain.json'):
         with open('markov_chain.json', 'r') as f:
-            print('Loading from JSON file: markov_chain.json')
+            print('Loading Markov Chain from JSON file')
             markov = json.load(f)
+    # Else create a new one from our corpora
     else:
+        tokenized_text = []
+        # Open and clean all texts in corpora folder
+        for name in os.listdir('corpora'):
+            if 'DS_Store' not in name:
+                with open(f'corpora/{name}', 'r') as f:
+                    # Get rid of special characters
+                    words = f.read().replace('\n', ' ').split()
+                    for w in words:
+                        w = w.replace('"', '')
+                        w = w.replace('\'', '')
+                        # Stray apostrophes everywhere for some reason
+                        if re.match(r'.*[’]$', w):
+                            w = w[:-1]
+                        if re.search(r'^[a-zA-Z]', w):
+                            tokenized_text.append(w)
+        # Generate new Markov Chain
         markov = create_markov(tokenized_text)
+
         with open('markov_chain.json', 'w') as f:
             json.dump(markov, f)
+    
     # Generate given number of verses
-    final_text = create_text(markov, 30)
+    final_text = create_text(markov, 50)
 
     with open('final.txt', 'w') as f:
         f.write(final_text)
@@ -119,16 +124,16 @@ def create_text(markov, length):
     # Create title
     exclude = ['Israel', 'Egypt']
     options = list(markov['of'].keys())
-    print(options)
     option_weights = list(markov['of'].values())
     while True:
         choice = random.choices(
                     options, 
                     weights=option_weights, 
                     k=1)[0]
+        choice = ''.join(filter(str.isalpha, choice))   # Black magic
+
         # Must be a proper noun (exclude israel and egypt, too common)
         if re.match(r'^[A-Z].*', choice) and choice not in exclude:
-            choice = ''.join(filter(str.isalpha, choice))   # Black magic
             text += f'{choice}\n\n'
             break
 
@@ -137,16 +142,6 @@ def create_text(markov, length):
 
     # Generate text
     while verse <= length:
-        # List all possible next words
-        possible_nexts = list(markov[current_word].keys())
-        # List all weights associated with possible next words
-        possible_nexts_weights = list(markov[current_word].values())
-        # Choose a word according to weights
-        next_word = random.choices(
-            possible_nexts, 
-            weights=possible_nexts_weights, 
-            k=1)[0]
-        
         chance = random.randrange(0, 3)
         # If verse has ended, start a new one
         if end_verse:
@@ -160,7 +155,16 @@ def create_text(markov, length):
         # Else, add a new word to the verse
         else:
             text += f'{current_word} '
-
+        
+        # List all possible next words
+        possible_nexts = list(markov[current_word].keys())
+        # List all weights associated with possible next words
+        possible_nexts_weights = list(markov[current_word].values())
+        # Choose a word according to weights
+        next_word = random.choices(
+            possible_nexts, 
+            weights=possible_nexts_weights, 
+            k=1)[0]
         current_word = next_word
 
     return text
