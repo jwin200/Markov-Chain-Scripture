@@ -20,6 +20,7 @@ def __parse():
                         metavar='V',
                         dest='verses',
                         default=30,
+                        type=int,
                         help='Specify the number of verses you\'d like to generate, optional')
     
     parser.add_argument('-o', '--output',
@@ -42,6 +43,7 @@ def __main():
             markov = json.load(f)
     # Else create a new one from our corpora
     else:
+        print('Creating new Markov Chain from corpus')
         tokenized_text = []
         # Open and clean all texts in corpora folder
         for name in os.listdir('corpus'):
@@ -53,7 +55,7 @@ def __main():
                         w = w.replace('"', '')
                         w = w.replace('\'', '')
                         # Stray apostrophes everywhere for some reason
-                        if re.match(r'.*[’]$', w):
+                        if re.match(r'.*[’|\)]$', w):
                             w = w[:-1]
                         if re.search(r'^[a-zA-Z]', w) and re.match(r'.*[a-z].*', w):
                             tokenized_text.append(w)
@@ -86,8 +88,7 @@ def create_markov(text):
         # If current word is already accounted for
         if current in list(markov_temp.keys()):
             # Add one to total occurences
-            markov_temp[current][1] += 1
-            possible_words = markov_temp[current][0]
+            possible_words = markov_temp[current]
             # If the next word is already accounted for, add an occurence
             if next in list(possible_words.keys()):
                 possible_words[next] += 1
@@ -96,10 +97,7 @@ def create_markov(text):
                 possible_words[next] = 1
         # If current word is not accounted for, create an entry
         else:
-            markov_temp[current] = [
-                { next: 1 }, 
-                1
-            ]
+            markov_temp[current] = { next: 1 }
         
         i += 1
         # Loading screen
@@ -107,12 +105,12 @@ def create_markov(text):
     
     # Create final object with all words and combos
     for w in list(markov_temp.keys()):
-        possible_words = markov_temp[w][0]
-        total_occurences = markov_temp[w][1]
+        possible_words = markov_temp[w]
+        total_occurences = sum(list(markov_temp[w].values()))
         markov_final[w] = {}
 
-        # Create list of possible next words and their likelihood to occur, 
-        # rounded to nearest hundred thousandth
+        # Create dictionary of possible next words and their likelihood 
+        # to occur, rounded to nearest hundred thousandth
         for n in list(possible_words.keys()):
             markov_final[w][n] = round(
                 (possible_words[n] / total_occurences), 
