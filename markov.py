@@ -2,22 +2,6 @@
 Python Script to spice up the Old Testament
 Jonah Winchell
 Code as a Liberal Art, Spring 2025
-
-
-Markov Chain object stores key words and a list of following words 
-with their chance of occurence
-
-markov_chain = {
-    'I': {
-        'am': .16,
-        'will': .26,
-        'do': .61
-    },
-    'will': {
-        'not': .44,
-        'never': .56
-    }
-}
 '''
 
 import re
@@ -38,9 +22,9 @@ def main():
     else:
         tokenized_text = []
         # Open and clean all texts in corpora folder
-        for name in os.listdir('corpora'):
+        for name in os.listdir('corpus'):
             if 'DS_Store' not in name:
-                with open(f'corpora/{name}', 'r') as f:
+                with open(f'corpus/{name}', 'r') as f:
                     # Get rid of special characters
                     words = f.read().replace('\n', ' ').split()
                     for w in words:
@@ -60,7 +44,7 @@ def main():
     # Generate given number of verses
     final_text = create_text(markov, 50)
 
-    with open('final.txt', 'w') as f:
+    with open('output/final.txt', 'w') as f:
         f.write(final_text)
     return
 

@@ -1,5 +1,5 @@
 '''
-Python Script to build a corpus for a spicier Old Testament
+Python Script to build a corpus for a more interesting Old Testament
 Jonah Winchell
 Code as a Liberal Art, Spring 2025
 '''
@@ -27,7 +27,7 @@ def download_torah():
                 new_response = requests.get(f'{index}/{link_name}.txt')
                 text = str(bs(new_response.content, 'html.parser'))
 
-                with open(f'corpora/{link_name}.txt', 'w') as f:
+                with open(f'corpus/{link_name}.txt', 'w') as f:
                     f.write(text)
 
 
@@ -58,7 +58,7 @@ def download_LOTR():
             include = True
 
     # Save text to local file
-    with open(f'corpora/lotr.txt', 'w') as f:
+    with open(f'corpus/lotr.txt', 'w') as f:
         f.write(final_text)
 
 
