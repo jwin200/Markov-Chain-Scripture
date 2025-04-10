@@ -8,9 +8,31 @@ import re
 import os
 import json
 import random
+import argparse
 
 
-def main():
+''' Parse command line arguments '''
+def __parse():
+    parser = argparse.ArgumentParser(description = 'Outline your next Scripture!',
+                                    formatter_class = argparse.RawDescriptionHelpFormatter)
+    
+    parser.add_argument('-v', '--verses',
+                        metavar='V',
+                        dest='verses',
+                        default=30,
+                        help='Specify the number of verses you\'d like to generate, optional')
+    
+    parser.add_argument('-o', '--output',
+                        metavar='O',
+                        dest='output',
+                        default='final.txt',
+                        help='Optional name of desired output file, defaults to: "final.txt"')
+    
+    return vars(parser.parse_args())
+
+
+def __main():
+    args = __parse()
     markov = {}
     
     # If a Markov Chain exists, load it
@@ -33,7 +55,7 @@ def main():
                         # Stray apostrophes everywhere for some reason
                         if re.match(r'.*[’]$', w):
                             w = w[:-1]
-                        if re.search(r'^[a-zA-Z]', w):
+                        if re.search(r'^[a-zA-Z]', w) and re.match(r'.*[a-z].*', w):
                             tokenized_text.append(w)
         # Generate new Markov Chain
         markov = create_markov(tokenized_text)
@@ -42,9 +64,9 @@ def main():
             json.dump(markov, f)
     
     # Generate given number of verses
-    final_text = create_text(markov, 50)
+    final_text = create_text(markov, args['verses'])
 
-    with open('output/final.txt', 'w') as f:
+    with open(f'output/{args['output']}', 'w') as f:
         f.write(final_text)
     return
 
@@ -90,11 +112,11 @@ def create_markov(text):
         markov_final[w] = {}
 
         # Create list of possible next words and their likelihood to occur, 
-        # rounded to nearest thousandth
+        # rounded to nearest hundred thousandth
         for n in list(possible_words.keys()):
             markov_final[w][n] = round(
                 (possible_words[n] / total_occurences), 
-                3)
+                5)
     
     return markov_final
 
@@ -123,22 +145,28 @@ def create_text(markov, length):
 
     # Choose a random word to start
     current_word = random.choice(list(markov.keys()))
+    uppercase = False
 
     # Generate text
     while verse <= length:
         chance = random.randrange(0, 3)
+        # Capitalize new sentences
+        word = current_word
+        if uppercase:
+            word = word.title()
+            uppercase = False
         # If verse has ended, start a new one
         if end_verse:
-            text += f'[{verse}] {current_word.title()} '
+            text += f'[{verse}] {word.title()} '
             end_verse = False
         # If a word ends with punctuation, possibly end this verse
-        elif re.match(r'.*[^a-zA-Z]$', current_word) and chance == 0:
-            text += f'{current_word}\n'
+        elif re.match(r'.*[^a-zA-Z]$', word) and chance == 0:
+            text += f'{word}\n'
             end_verse = True
             verse += 1
         # Else, add a new word to the verse
         else:
-            text += f'{current_word} '
+            text += f'{word} '
         
         # List all possible next words
         possible_nexts = list(markov[current_word].keys())
@@ -149,18 +177,21 @@ def create_text(markov, length):
             possible_nexts, 
             weights=possible_nexts_weights, 
             k=1)[0]
+        # If sentence ended, next word uppercase
+        if re.match(r'.*[\.|\!|\?]$', current_word):
+            uppercase = True
+
         current_word = next_word
 
     return text
 
 
+''' Display loading messages '''
 def __stats(length, i):
-    ''' Display loading messages '''
-
     print(f'\tCreating Markov Chains                   \n'
           f'\t{round((i / length) * 100, 3)}% done     \n',
           end='\r\033[A\r\033[A')
 
 
 if __name__ == '__main__':
-    main()
+    __main()

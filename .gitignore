@@ -1,4 +1,5 @@
 corpus
+output
 markov_chain.json
 final.txt
 .DS_Store

@@ -16,12 +16,11 @@ index2 = 'https://dn721603.ca.archive.org/0/items/tolkien-j.-the-lord-of-the-rin
 def download_torah():
     torah_books = ['Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy']
 
-    p = re.compile(r'^[A-Z].*')
     response = requests.get(index)
     soup = bs(response.content, 'html.parser', parse_only=SoupStrainer('tr'))
     soup.prettify()
     for link in soup.find_all('a'):
-        if link.has_attr('href') and re.match(p, link['href']):
+        if link.has_attr('href') and re.match(r'^[A-Z].*', link['href']):
             link_name = link['href'].split('.')[0]
             if link_name in torah_books:
                 new_response = requests.get(f'{index}/{link_name}.txt')
@@ -34,8 +33,6 @@ def download_torah():
 ''' Scrape and download the Lord of the Rings '''
 def download_LOTR():
     # Warning, absolutely terrible methods to clean the text lie below
-    p = re.compile(r'^[a-zA-Z].*')
-    p2 = re.compile(r'.*[1-9].*')
     include = False
 
     # Get text from website
@@ -51,9 +48,9 @@ def download_LOTR():
             if 'APPENDIX' in l:
                 break
             # If the line contains valid text, include it
-            elif re.match(p, l) and not re.match(p2, l):
+            elif re.match(r'^[a-zA-Z].*', l) and not re.match(r'.*[1-9].*', l):
                 final_text += f'{l}\n'
-        # If we have not yet hit the prologue, do not include
+        # Once we hit the prologue, start including text
         elif 'accessory volume.' in l:
             include = True
 
