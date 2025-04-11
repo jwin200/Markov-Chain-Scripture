@@ -32,7 +32,7 @@ def download_torah():
 
 ''' Scrape and download the Lord of the Rings '''
 def download_LOTR():
-    # Warning, absolutely terrible methods to clean the text lie below
+    # Warning, terrible methods to clean the text lie below
     include = False
 
     # Get text from website

@@ -29,6 +29,13 @@ def __parse():
                         default='final.txt',
                         help='Optional name of desired output file, defaults to: "final.txt"')
     
+    parser.add_argument('-b', '--build',
+                        metavar='B',
+                        dest='build',
+                        nargs='?',
+                        const=True,
+                        help='Optionally force-build a new Markov Chain object')
+    
     return vars(parser.parse_args())
 
 
@@ -37,7 +44,7 @@ def __main():
     markov = {}
     
     # If a Markov Chain exists, load it
-    if os.path.exists('markov_chain.json'):
+    if os.path.exists('markov_chain.json') and not args['build']:
         with open('markov_chain.json', 'r') as f:
             print('Loading Markov Chain from JSON file')
             markov = json.load(f)
@@ -73,48 +80,63 @@ def __main():
     return
 
 
-''' Given a tokenized text, return a Markov Chain object '''
+''' Given a tokenized text, return a 3-gram Markov Chain object '''
 def create_markov(text):
     markov_temp = {}
     markov_final = {}
     total_length = len(text)
-    i = 0
+    i = 1
 
     # Go through the whole text
     while i < total_length-2:
+        last = text[i-1]
         current = text[i]
         next = text[i+1]
 
-        # If current word is already accounted for
-        if current in list(markov_temp.keys()):
-            # Add one to total occurences
-            possible_words = markov_temp[current]
-            # If the next word is already accounted for, add an occurence
-            if next in list(possible_words.keys()):
-                possible_words[next] += 1
-            # If the next word is not accounted for, create an entry
+        # If last word is already accounted for
+        if last in list(markov_temp.keys()):
+            # If current word is already accounted for
+            if current in list(markov_temp[last].keys()):
+                # Get possible next words
+                possible_words = markov_temp[last][current]
+                # If the next word is already accounted for, add an occurence
+                if next in list(possible_words.keys()):
+                    possible_words[next] += 1
+                # If the next word is not accounted for, create an entry
+                else:
+                    possible_words[next] = 1
+            # If current word is not accounted for, create an entry
             else:
-                possible_words[next] = 1
-        # If current word is not accounted for, create an entry
+                markov_temp[last][current] = { next: 1 }
+        # If last word not accounted for, create an entry
         else:
-            markov_temp[current] = { next: 1 }
+            markov_temp[last] = { 
+                current: { 
+                    next: 1
+                }
+            }
         
         i += 1
+
         # Loading screen
         __stats(total_length, i)
     
     # Create final object with all words and combos
     for w in list(markov_temp.keys()):
-        possible_words = markov_temp[w]
-        total_occurences = sum(list(markov_temp[w].values()))
+        possible_current = markov_temp[w]
         markov_final[w] = {}
+        # For all possible words that follow last word (w)
+        for p in possible_current:
+            possible_next = possible_current[p]
+            total_occurences = sum(list(possible_next.values()))
+            markov_final[w][p] = {}
 
-        # Create dictionary of possible next words and their likelihood 
-        # to occur, rounded to nearest hundred thousandth
-        for n in list(possible_words.keys()):
-            markov_final[w][n] = round(
-                (possible_words[n] / total_occurences), 
-                5)
+            # Create dictionary of possible next words and their likelihood 
+            # to occur, rounded to nearest ten thousandth
+            for n in list(possible_next.keys()):
+                markov_final[w][p][n] = round(
+                    (possible_next[n] / total_occurences), 
+                    4)
     
     return markov_final
 
@@ -123,17 +145,14 @@ def create_markov(text):
 def create_text(markov, length):
     verse = 1
     end_verse = True
+    uppercase = False
     text = 'Book of '
 
     # Create title
     exclude = ['Israel', 'Egypt']
     options = list(markov['of'].keys())
-    option_weights = list(markov['of'].values())
     while True:
-        choice = random.choices(
-                    options, 
-                    weights=option_weights, 
-                    k=1)[0]
+        choice = random.choice(options)
         choice = ''.join(filter(str.isalpha, choice))   # Black magic
 
         # Must be a proper noun (exclude israel and egypt, too common)
@@ -141,13 +160,13 @@ def create_text(markov, length):
             text += f'{choice}\n\n'
             break
 
-    # Choose a random word to start
-    current_word = random.choice(list(markov.keys()))
-    uppercase = False
+    # Choose a random first two words to start
+    last_word = random.choice(list(markov.keys()))
+    current_word = random.choice(list(markov[last_word].keys()))
 
     # Generate text
     while verse <= length:
-        chance = random.randrange(0, 3)
+        end_chance = random.randrange(0, 3)
         # Capitalize new sentences
         word = current_word
         if uppercase:
@@ -158,7 +177,7 @@ def create_text(markov, length):
             text += f'[{verse}] {word.title()} '
             end_verse = False
         # If a word ends with punctuation, possibly end this verse
-        elif re.match(r'.*[^a-zA-Z]$', word) and chance == 0:
+        elif re.match(r'.*[^a-zA-Z]$', word) and end_chance == 0:
             text += f'{word}\n'
             end_verse = True
             verse += 1
@@ -167,9 +186,9 @@ def create_text(markov, length):
             text += f'{word} '
         
         # List all possible next words
-        possible_nexts = list(markov[current_word].keys())
+        possible_nexts = list(markov[last_word][current_word].keys())
         # List all weights associated with possible next words
-        possible_nexts_weights = list(markov[current_word].values())
+        possible_nexts_weights = list(markov[last_word][current_word].values())
         # Choose a word according to weights
         next_word = random.choices(
             possible_nexts, 
@@ -179,6 +198,7 @@ def create_text(markov, length):
         if re.match(r'.*[\.|\!|\?]$', current_word):
             uppercase = True
 
+        last_word = current_word
         current_word = next_word
 
     return text
@@ -187,7 +207,7 @@ def create_text(markov, length):
 ''' Display loading messages '''
 def __stats(length, i):
     print(f'\tCreating Markov Chains                   \n'
-          f'\t{round((i / length) * 100, 3)}% done     \n',
+          f'\t{round((i / length) * 100, 2)}% done     \n',
           end='\r\033[A\r\033[A')
 
 
