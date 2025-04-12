@@ -5,25 +5,36 @@ Code as a Liberal Art, Spring 2025
 '''
 
 import re
+import os
 import requests
 from bs4 import BeautifulSoup as bs, SoupStrainer
 
-index = 'https://archive.org/download/kjv-text-files'
-index2 = 'https://dn721603.ca.archive.org/0/items/tolkien-j.-the-lord-of-the-rings-harper-collins-ebooks-2010/Tolkien-J.-The-lord-of-the-rings-HarperCollins-ebooks-2010_djvu.txt'
+tanakh_index = 'https://archive.org/download/kjv-text-files'
+lotr_index = 'https://dn721603.ca.archive.org/0/items/tolkien-j.-the-lord-of-the-rings-harper-collins-ebooks-2010/Tolkien-J.-The-lord-of-the-rings-HarperCollins-ebooks-2010_djvu.txt'
+hobbit_index = 'https://dn720001.ca.archive.org/0/items/hobbit_202201/hobbit_djvu.txt'
 
 
-''' Scrape and download the Torah '''
-def download_torah():
-    torah_books = ['Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy']
+''' Scrape and download the Tanakh '''
+def download_tanakh():
+    torah_books = ['Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy', 
+                   'SongofSolomon', 'Joshua', 'Judges', 'Samuel', 'Kings', 
+                   'Isaiah', 'Jeremiah', 'Ezekiel', 'Hosea', 'Joel', 'Amos',
+                   'Obadiah', 'Jonah', 'Micah', 'Nahum', 'Habakkuk', 'Zephaniah',
+                   'Haggai', 'Zechariah', 'Malachi', 'Psalms', 'Proverbs', 'Job',
+                   'Ruth', 'Lamentations', 'Ecclesiastes', 'Esther', 'Daniel',
+                   'Ezra', 'Chronicles']
 
-    response = requests.get(index)
+    response = requests.get(tanakh_index)
     soup = bs(response.content, 'html.parser', parse_only=SoupStrainer('tr'))
     soup.prettify()
     for link in soup.find_all('a'):
         if link.has_attr('href') and re.match(r'^[A-Z].*', link['href']):
             link_name = link['href'].split('.')[0]
+            if f'{link_name}.txt' in os.listdir('corpus'):
+                print(f'{link_name} already downloaded...')
+                continue
             if link_name in torah_books:
-                new_response = requests.get(f'{index}/{link_name}.txt')
+                new_response = requests.get(f'{tanakh_index}/{link_name}.txt')
                 text = str(bs(new_response.content, 'html.parser'))
 
                 with open(f'corpus/{link_name}.txt', 'w') as f:
@@ -32,11 +43,15 @@ def download_torah():
 
 ''' Scrape and download the Lord of the Rings '''
 def download_LOTR():
+    if 'lotr.txt' in os.listdir('corpus'):
+        print(f'Lord of the Rings already downloaded...')
+        return
+
     # Warning, terrible methods to clean the text lie below
     include = False
 
     # Get text from website
-    response = requests.get(index2)
+    response = requests.get(lotr_index)
     text = str(bs(response.content, 'html.parser'))
     lines = list(iter(text.splitlines()))
     final_text = ''
@@ -59,6 +74,37 @@ def download_LOTR():
         f.write(final_text)
 
 
+''' Scrape and download The Hobbit '''
+def download_hobbit():
+    if 'hobbit.txt' in os.listdir('corpus'):
+        print(f'The Hobbit already downloaded...')
+        return
+    
+    # Warning, even more horrendous methods lie below
+    include = False
+
+    # Get text from website
+    response = requests.get(hobbit_index)
+    text = str(bs(response.content, 'html.parser'))
+    lines = list(iter(text.splitlines()))
+    final_text = ''
+
+    # Go through each line of text
+    for l in lines:
+        if include:
+            # If the line contains valid text, include it
+            if re.match(r'^[a-zA-Z].*', l) and not re.match(r'.*[1-9].*', l):
+                final_text += f'{l}\n'
+        # Once we hit the first chapter, start including text
+        elif 'An Unexpected Party' in l:
+            include = True
+
+    # Save text to local file
+    with open(f'corpus/hobbit.txt', 'w') as f:
+        f.write(final_text)
+
+
 if __name__ == '__main__':
-    download_torah()
+    download_tanakh()
     download_LOTR()
+    download_hobbit()

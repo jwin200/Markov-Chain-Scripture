@@ -51,24 +51,9 @@ def __main():
     # Else create a new one from our corpora
     else:
         print('Creating new Markov Chain from corpus')
-        tokenized_text = []
-        # Open and clean all texts in corpora folder
-        for name in os.listdir('corpus'):
-            if 'DS_Store' not in name:
-                with open(f'corpus/{name}', 'r') as f:
-                    # Get rid of special characters
-                    words = f.read().replace('\n', ' ').split()
-                    for w in words:
-                        w = w.replace('"', '')
-                        w = w.replace('\'', '')
-                        # Stray apostrophes everywhere for some reason
-                        if re.match(r'.*[’|\)]$', w):
-                            w = w[:-1]
-                        if re.search(r'^[a-zA-Z]', w) and re.match(r'.*[a-z].*', w):
-                            tokenized_text.append(w)
-        # Generate new Markov Chain
+        tokenized_text = tokenize('corpus')
         markov = create_markov(tokenized_text)
-
+        
         with open('markov_chain.json', 'w') as f:
             json.dump(markov, f)
     
@@ -78,6 +63,27 @@ def __main():
     with open(f'output/{args['output']}', 'w') as f:
         f.write(final_text)
     return
+
+
+''' Given a corpora folder, return a list of all tokenized words within '''
+def tokenize(corpus):
+    tokenized_text = []
+    # Open and clean all texts in corpora folder
+    for name in os.listdir(corpus):
+        if 'DS_Store' not in name:
+            with open(f'{corpus}/{name}', 'r') as f:
+                # Get rid of special characters
+                words = f.read().replace('\n', ' ').split()
+                for w in words:
+                    w = w.replace('"', '')
+                    w = w.replace('\'', '')
+                    # Stray apostrophes everywhere for some reason
+                    if re.match(r'.*[’|\)]$', w):
+                        w = w[:-1]
+                    if re.search(r'^[a-zA-Z]', w) and re.match(r'.*[a-z].*', w):
+                        tokenized_text.append(w)
+    
+    return tokenized_text
 
 
 ''' Given a tokenized text, return a 3-gram Markov Chain object '''
