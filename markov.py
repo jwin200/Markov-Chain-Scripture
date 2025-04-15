@@ -21,13 +21,13 @@ def __parse():
                         dest='verses',
                         default=30,
                         type=int,
-                        help='Specify the number of verses you\'d like to generate, optional')
+                        help='Specify the number of verses you\'d like to generate, defaults to 30')
     
     parser.add_argument('-o', '--output',
                         metavar='O',
                         dest='output',
                         default='final.txt',
-                        help='Optional name of desired output file, defaults to: "final.txt"')
+                        help='Rename the output file, defaults to "final.txt"')
     
     parser.add_argument('-b', '--build',
                         metavar='B',

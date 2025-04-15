@@ -16,7 +16,7 @@ hobbit_index = 'https://dn720001.ca.archive.org/0/items/hobbit_202201/hobbit_djv
 
 ''' Scrape and download the Tanakh '''
 def download_tanakh():
-    torah_books = ['Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy', 
+    tanakh_books = ['Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy', 
                    'SongofSolomon', 'Joshua', 'Judges', 'Samuel', 'Kings', 
                    'Isaiah', 'Jeremiah', 'Ezekiel', 'Hosea', 'Joel', 'Amos',
                    'Obadiah', 'Jonah', 'Micah', 'Nahum', 'Habakkuk', 'Zephaniah',
@@ -30,10 +30,12 @@ def download_tanakh():
     for link in soup.find_all('a'):
         if link.has_attr('href') and re.match(r'^[A-Z].*', link['href']):
             link_name = link['href'].split('.')[0]
+            # Check if we already have this text
             if f'{link_name}.txt' in os.listdir('corpus'):
                 print(f'{link_name} already downloaded...')
                 continue
-            if link_name in torah_books:
+            # Download if we have a matching text name
+            if link_name in tanakh_books:
                 new_response = requests.get(f'{tanakh_index}/{link_name}.txt')
                 text = str(bs(new_response.content, 'html.parser'))
 
@@ -41,13 +43,12 @@ def download_tanakh():
                     f.write(text)
 
 
-''' Scrape and download the Lord of the Rings '''
+''' Scrape and download The Lord of the Rings '''
 def download_LOTR():
     if 'lotr.txt' in os.listdir('corpus'):
         print(f'Lord of the Rings already downloaded...')
         return
 
-    # Warning, terrible methods to clean the text lie below
     include = False
 
     # Get text from website
@@ -64,7 +65,12 @@ def download_LOTR():
                 break
             # If the line contains valid text, include it
             elif re.match(r'^[a-zA-Z].*', l) and not re.match(r'.*[1-9].*', l):
-                final_text += f'{l}\n'
+                # Catch hyphenated line breaks
+                if re.search(r"- ", l):
+                    new_l = l[:-2]
+                    final_text += new_l
+                else:
+                    final_text += f'{l}\n'
         # Once we hit the prologue, start including text
         elif 'accessory volume.' in l:
             include = True
@@ -79,8 +85,7 @@ def download_hobbit():
     if 'hobbit.txt' in os.listdir('corpus'):
         print(f'The Hobbit already downloaded...')
         return
-    
-    # Warning, even more horrendous methods lie below
+
     include = False
 
     # Get text from website
