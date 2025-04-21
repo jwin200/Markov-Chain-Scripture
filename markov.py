@@ -23,11 +23,12 @@ def __parse():
                         type=int,
                         help='Specify the number of verses you\'d like to generate, defaults to 30')
     
-    parser.add_argument('-o', '--output',
-                        metavar='O',
-                        dest='output',
-                        default='final.txt',
-                        help='Rename the output file, defaults to "final.txt"')
+    parser.add_argument('-s', '--save',
+                        metavar='S',
+                        dest='save',
+                        nargs='?',
+                        const=False,
+                        help='Save each output with a unique filename, output file defaults to \'final.txt\'')
     
     parser.add_argument('-b', '--build',
                         metavar='B',
@@ -60,7 +61,16 @@ def __main():
     # Generate given number of verses
     final_text = create_text(markov, args['verses'])
 
-    with open(f'output/{args['output']}', 'w') as f:
+    savename = ''
+    # Save with unique filename if requested by user
+    if not args['save']:
+        savename = f'{final_text.split('\n')[0].replace(' ', '')}.txt'
+        print(f'Saved as {savename}')
+        savename = 'output/' + savename
+    else:
+        savename = 'output/final.txt'
+
+    with open(savename, 'w') as f:
         f.write(final_text)
     return
 
